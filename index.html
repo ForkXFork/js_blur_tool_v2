@@ -1,96 +1,172 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Pixelation Tool</title>
-    <style>
-        @keyframes gradientBg {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        @keyframes gradientButtons {
-            0% {
-                background-position: 100% 50%;
-            }
-            50% {
-                background-position: 0% 50%;
-            }
-            100% {
-                background-position: 100% 50%;
-            }
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(-45deg, #0d2236, #1e3a56, #3a539b, #1e3a56);
-            background-size: 400% 400%;
-            animation: gradientBg 15s ease infinite;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-
-        #canvas {
-            border: 2px solid #00bcd4;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            margin-bottom: 20px;
-        }
-
-        .buttons {
-            display: flex;
-        }
-
-        input[type="file"], button {
-            background: linear-gradient(-45deg, #00bcd4, #3a539b, #5c93d5, #3a539b);
-            background-size: 400% 400%;
-            animation: gradientButtons 15s ease infinite;
-            border: none;
-            border-radius: 3px;
-            color: #fff;
-            cursor: pointer;
-            font-size: 1rem;
-            margin: 5px;
-            outline: none;
-            padding: 10px 15px;
-            text-transform: uppercase;
-            transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-        }
-
-        input[type="file"]:hover, button:hover {
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        }
-    </style>
+  <style>
+    body {
+      background: linear-gradient(90deg, rgba(13,13,13,1) 0%, rgba(36,36,62,1) 50%, rgba(13,13,13,1) 100%);
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #0FF;
+    }
+    #controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    #fileInput, #clearButton, #saveButton, #imageType {
+      border: 2px solid #0FF;
+      background-color: #000;
+      color: #0FF;
+      padding: 10px 20px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    #fileInput:hover, #clearButton:hover, #saveButton:hover, #imageType:hover {
+      background-color: #0FF;
+      color: #000;
+    }
+    canvas {
+      border: 3px dashed #0FF;
+      background-color: rgba(0, 255, 255, 0.1);
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <canvas id="canvas" width="500" height="500"></canvas>
-        <div class="buttons">
-            <input type="file" id="imageFile" accept="image/*">
-            <button id="saveButton">Save Image</button>
-        </div>
-    </div>
-    <script src="script.js"></script>
+  <div id="controls">
+    <input type="file" id="fileInput" accept="image/*">
+    <button id="clearButton">Clear</button>
+    <button id="saveButton">Save</button>
+    <h3 style="margin: 2% 0 0 0;">Save Image Format As:</h3>
+    <select id="imageType">
+      <option value="image/jpeg">JPEG</option>
+      <option value="image/png">PNG</option>
+    </select>
+  </div>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    let ctx, img, imgData;
+    let dragging = false;
+    let startPoint = {};
+
+    const fileInput = document.querySelector('#fileInput');
+    const canvas = document.querySelector('#canvas');
+    const clearButton = document.querySelector('#clearButton');
+    const saveButton = document.querySelector('#saveButton');
+    const imageType = document.querySelector('#imageType');
+
+    fileInput.addEventListener('change', function(event) {
+      let reader = new FileReader();
+      reader.onload = function(event) {
+        img = new Image();
+        img.onload = function() {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+          imgData = ctx.getImageData(0, 0, img.width, img.height);
+        }
+        img.src = event.target.result;
+      }
+      reader.readAsDataURL(event.target.files[0]);
+    });
+
+    canvas.addEventListener('mousedown', function(event) {
+      dragging = true;
+      startPoint.x = event.pageX - canvas.offsetLeft;
+      startPoint.y = event.pageY - canvas.offsetTop;
+    });
+
+    canvas.addEventListener('mousemove', function(event) {
+      if (!dragging || !imgData) return;
+
+      let endPoint = {
+        x: event.pageX - canvas.offsetLeft,
+        y: event.pageY - canvas.offsetTop
+      };
+
+      let x = Math.min(startPoint.x, endPoint.x);
+      let y = Math.min(startPoint.y, endPoint.y);
+      let width = Math.abs(startPoint.x - endPoint.x);
+      let height = Math.abs(startPoint.y - endPoint.y);
+
+      ctx.putImageData(imgData, 0, 0); // Update image before drawing rectangle
+      ctx.fillStyle = 'rgba(135,206,235,0.5)';
+      ctx.fillRect(x, y, width, height);
+    });
+
+    canvas.addEventListener('mouseup', function(event) {
+      if (!dragging) return;
+      dragging = false;
+
+      let endPoint = {
+        x: event.pageX - canvas.offsetLeft,
+        y: event.pageY - canvas.offsetTop
+      };
+
+      let x = Math.min(startPoint.x, endPoint.x);
+      let y = Math.min(startPoint.y, endPoint.y);
+      let width = Math.abs(startPoint.x - endPoint.x);
+      let height = Math.abs(startPoint.y - endPoint.y);
+
+      ctx.putImageData(imgData, 0, 0); // Redraw image to remove the selection rectangle
+
+      let selectionData = ctx.getImageData(x, y, width, height);
+      let blurredSelection = simpleBlur(selectionData);
+      ctx.putImageData(blurredSelection, x, y);
+
+      imgData = ctx.getImageData(0, 0, img.width, img.height); // Update imgData after the blur operation
+    });
+
+    clearButton.addEventListener('click', function() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      imgData = undefined;
+    });
+
+    saveButton.addEventListener('click', function() {
+      if (!ctx) return;
+      let link = document.createElement('a');
+      link.download = 'blurred.' + imageType.value.split('/')[1];
+      link.href = canvas.toDataURL(imageType.value);
+      link.click();
+    });
+
+    function simpleBlur(imageData) {
+      const radius = 10; // Increase this for more blur
+      for (let y = 0; y < imageData.height; y++) {
+        for (let x = 0; x < imageData.width; x++) {
+          let r = 0, g = 0, b = 0, a = 0, count = 0;
+          for (let ky = -radius; ky <= radius; ky++) {
+            for (let kx = -radius; kx <= radius; kx++) {
+              const iy = y + ky;
+              const ix = x + kx;
+              if (iy >= 0 && iy < imageData.height && ix >= 0 && ix < imageData.width) {
+                const index = (iy * imageData.width + ix) * 4;
+                r += imageData.data[index + 0];
+                g += imageData.data[index + 1];
+                b += imageData.data[index + 2];
+                a += imageData.data[index + 3];
+                count++;
+              }
+            }
+          }
+          const index = (y * imageData.width + x) * 4;
+          imageData.data[index + 0] = r / count;
+          imageData.data[index + 1] = g / count;
+          imageData.data[index + 2] = b / count;
+          imageData.data[index + 3] = a / count;
+        }
+      }
+      return imageData;
+    }
+  </script>
 </body>
 </html>
